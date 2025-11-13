@@ -1,0 +1,516 @@
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { X, Send, Sparkles, Check } from 'lucide-react';
+
+interface Message {
+  id: string;
+  text: string;
+  isUser: boolean;
+  timestamp: Date;
+  type?: 'text' | 'tariffs' | 'tariff-details' | 'tariff-selected';
+  tariffData?: {
+    name: string;
+    price: number;
+    description: string;
+    services: string[];
+  };
+}
+
+interface AIChatModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onOpenStepper?: (tariffName: string) => void;
+}
+
+const quickActions = [
+  { id: 1, text: "Выбрать готовый тариф", emoji: "📦" },
+  { id: 2, text: "Собрать тариф самостоятельно", emoji: "🔧" },
+  { id: 3, text: "Узнать стоимость услуг", emoji: "💰" },
+  { id: 4, text: "Помощь с выбором формата", emoji: "🤔" },
+  { id: 5, text: "Консультация по документам", emoji: "📄" },
+];
+
+const tariffs = [
+  {
+    name: "Стандарт",
+    price: 100000,
+    description: "Базовый комплект услуг для достойного прощания",
+    services: [
+      "Гроб стандартный",
+      "Венок и цветы",
+      "Транспортировка",
+      "Место на кладбище (стандарт)",
+      "Оформление документов",
+      "Ритуальные принадлежности"
+    ]
+  },
+  {
+    name: "Комфорт",
+    price: 200000,
+    description: "Расширенный набор услуг с улучшенной атрибутикой",
+    services: [
+      "Гроб улучшенный",
+      "Венки и цветочные композиции",
+      "Транспортировка (класс комфорт)",
+      "Место на кладбище (комфорт)",
+      "Оформление документов",
+      "Ритуальные принадлежности расширенные",
+      "Поминальный обед (базовый)",
+      "Памятная табличка"
+    ]
+  },
+  {
+    name: "Премиум",
+    price: 300000,
+    description: "Полный премиальный комплекс услуг",
+    services: [
+      "Гроб премиум класса",
+      "Эксклюзивные цветочные композиции",
+      "Транспортировка VIP",
+      "Место на кладбище (премиум)",
+      "Полное оформление документов",
+      "Ритуальные принадлежности премиум",
+      "Поминальный обед (расширенный)",
+      "Памятный монумент",
+      "Фото и видео съемка",
+      "Организация церемонии"
+    ]
+  }
+];
+
+export function AIChatModal({ isOpen, onClose, onOpenStepper }: AIChatModalProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [lastClickedActionId, setLastClickedActionId] = useState<number | null>(null);
+  const [selectedTariffName, setSelectedTariffName] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      // Приветственное сообщение при открытии
+      setTimeout(() => {
+        const welcomeMessage: Message = {
+          id: Date.now().toString(),
+          text: "Здравствуйте! Я ваш AI-помощник по организации прощания. Готов помочь вам подобрать оптимальный вариант и ответить на все вопросы. Выберите один из быстрых вариантов ниже или напишите свой вопрос.",
+          isUser: false,
+          timestamp: new Date(),
+        };
+        setMessages([welcomeMessage]);
+      }, 500);
+    }
+  }, [isOpen]);
+
+  const simulateAIResponse = (userMessage: string): string => {
+    const lowerMessage = userMessage.toLowerCase();
+    
+    if (lowerMessage.includes('тариф') || lowerMessage.includes('готовый')) {
+      return "Отлично! У нас есть три готовых тарифа: Стандарт (100 000₽), Комфорт (200 000₽) и Премиум (300 000₽). Каждый включает все необходимое для достойного прощания. Рекомендую начать с шага 'Формат' в мастере настройки выше.";
+    }
+    
+    if (lowerMessage.includes('собрать') || lowerMessage.includes('самостоятельно')) {
+      return "Конечно! Вы можете собрать индивидуальную комплектацию, выбирая только нужные услуги. Начните с выбора формата (захоронение или кремация), затем места, атрибутики и дополнительных услуг. Итоговая стоимость отображается в калькуляторе справа внизу.";
+    }
+    
+    if (lowerMessage.includes('стоимость') || lowerMessage.includes('цена')) {
+      return "Стоимость зависит от выбранного формата и комплектации. Базовые тарифы начинаются от 100 000₽. Вы можете использовать наш калькулятор для точного расчета, добавляя только необходимые услуги.";
+    }
+    
+    if (lowerMessage.includes('документ')) {
+      return "Для организации прощания потребуются: свидетельство о смерти, паспорт усопшего, ваш паспорт (как заказчика). Я помогу вам пройти через все этапы оформления на шаге 'Документы' в мастере.";
+    }
+    
+    if (lowerMessage.includes('формат') || lowerMessage.includes('выбор')) {
+      return "Основные форматы: захоронение (традиционное погребение на кладбище) и кремация (с последующим размещением урны в колумбарии или выдачей родственникам). Выбор зависит от ваших личных предпочтений, культурных традиций и бюджета.";
+    }
+    
+    return "Спасибо за ваш вопрос. Для более детальной консультации рекомендую воспользоваться пошаговым мастером выше или выбрать один из быстрых вариантов. Я здесь, чтобы помочь вам на каждом этапе.";
+  };
+
+  const handleQuickAction = (actionText: string, actionId: number) => {
+    // Добавляем сообщение пользователя
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: actionText,
+      isUser: true,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+
+    // Специальная обработка для "Выбрать готовый тариф"
+    if (actionText === "Выбрать готовый тариф") {
+      setIsTyping(true);
+      setTimeout(() => {
+        const aiResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: "Отлично! Вот наши готовые тарифы. Выберите подходящий вариант:",
+          isUser: false,
+          timestamp: new Date(),
+          type: 'tariffs',
+        };
+        setMessages(prev => [...prev, aiResponse]);
+        setIsTyping(false);
+      }, 1500);
+      return;
+    }
+
+    // Имитация печатания AI для остальных действий
+    setIsTyping(true);
+    setTimeout(() => {
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: simulateAIResponse(actionText),
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, aiResponse]);
+      setIsTyping(false);
+    }, 1500);
+
+    // Запоминаем ID последнего нажатого действия
+    setLastClickedActionId(actionId);
+  };
+
+  const handleTariffSelection = (tariff: typeof tariffs[0]) => {
+    // Сообщение пользователя о выборе
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: `Показать детали тарифа "${tariff.name}"`,
+      isUser: true,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+
+    // Ответ AI с деталями тарифа
+    setIsTyping(true);
+    setTimeout(() => {
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: `Вот подробная информация о тарифе "${tariff.name}":`,
+        isUser: false,
+        timestamp: new Date(),
+        type: 'tariff-details',
+        tariffData: tariff,
+      };
+      setMessages(prev => [...prev, aiResponse]);
+      setIsTyping(false);
+    }, 1000);
+  };
+
+  const handleSelectTariff = (tariffName: string) => {
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: `Выбрать тариф "${tariffName}"`,
+      isUser: true,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+
+    setIsTyping(true);
+    setTimeout(() => {
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: `Отлично! Тариф "${tariffName}" выбран. Теперь вы можете перейти к настройке деталей в пошаговом мастере выше или задать мне дополнительные вопросы.`,
+        isUser: false,
+        timestamp: new Date(),
+        type: 'tariff-selected',
+      };
+      setMessages(prev => [...prev, aiResponse]);
+      setIsTyping(false);
+      // Сохраняем выбранный тариф, но не открываем stepper сразу
+      setSelectedTariffName(tariffName);
+    }, 1000);
+  };
+
+  const handleBackToTariffs = () => {
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: "Вернуться к выбору тарифов",
+      isUser: true,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+
+    setIsTyping(true);
+    setTimeout(() => {
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "Конечно! Вот наши готовые тарифы. Выберите подходящий вариант:",
+        isUser: false,
+        timestamp: new Date(),
+        type: 'tariffs',
+      };
+      setMessages(prev => [...prev, aiResponse]);
+      setIsTyping(false);
+    }, 1000);
+  };
+
+  const handleSendMessage = () => {
+    if (!inputValue.trim()) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: inputValue,
+      isUser: true,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+
+    // Имитация печатания AI
+    setIsTyping(true);
+    setTimeout(() => {
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: simulateAIResponse(inputValue),
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, aiResponse]);
+      setIsTyping(false);
+    }, 1500);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      {/* Полноэкранное окно чата */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-[9999] bg-white flex flex-col overflow-hidden"
+      >
+        {/* Заголовок с кнопкой закрытия */}
+        <div className="flex-shrink-0 flex items-center justify-between p-4 md:p-6 border-b border-gray-200 bg-white">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg md:text-xl text-gray-900">AI-Помощник</h2>
+              <p className="text-xs md:text-sm text-gray-500">Персональный консультант</p>
+            </div>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onClose}
+            className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all duration-200"
+          >
+            <X className="w-5 h-5 md:w-6 md:h-6" />
+          </motion.button>
+        </div>
+
+        {/* Область сообщений */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 min-h-0">
+          <div className="max-w-4xl mx-auto space-y-4 w-full">
+            {messages.map((message) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+              >
+                {message.isUser ? (
+                  <div className="max-w-[80%] md:max-w-[70%] rounded-2xl px-4 py-3 bg-gray-800 text-white">
+                    <p className="text-sm md:text-base leading-relaxed">{message.text}</p>
+                  </div>
+                ) : (
+                  <div className="max-w-[90%] space-y-3 w-full">
+                    <div className="rounded-2xl px-4 py-3 bg-white text-gray-900 border border-gray-200 shadow-sm">
+                      <p className="text-sm md:text-base leading-relaxed">{message.text}</p>
+                      
+                      {/* Кнопка "Перейти" для выбранного тарифа */}
+                      {message.type === 'tariff-selected' && (
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => {
+                            if (selectedTariffName) {
+                              onOpenStepper?.(selectedTariffName);
+                            }
+                            onClose();
+                          }}
+                          className="mt-3 w-full py-3 bg-gray-800 text-white rounded-full hover:bg-gray-900 transition-all duration-200"
+                        >
+                          Перейти к настройке
+                        </motion.button>
+                      )}
+                    </div>
+
+                    {/* Карточки тарифов */}
+                    {message.type === 'tariffs' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {tariffs.map((tariff) => (
+                          <motion.button
+                            key={tariff.name}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleTariffSelection(tariff)}
+                            className="p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-gray-400 transition-all duration-200 text-left"
+                          >
+                            <h3 className="text-base md:text-lg mb-2 text-gray-900">{tariff.name}</h3>
+                            <p className="text-xl md:text-2xl mb-2 text-gray-900">{tariff.price.toLocaleString('ru-RU')} ₽</p>
+                            <p className="text-xs md:text-sm text-gray-600">{tariff.description}</p>
+                          </motion.button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Детали тарифа */}
+                    {message.type === 'tariff-details' && message.tariffData && (
+                      <div className="p-4 md:p-6 bg-white border-2 border-gray-300 rounded-xl shadow-lg">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+                          <h3 className="text-xl md:text-2xl text-gray-900">{message.tariffData.name}</h3>
+                          <p className="text-2xl md:text-3xl text-gray-900">{message.tariffData.price.toLocaleString('ru-RU')} ₽</p>
+                        </div>
+                        <p className="text-sm md:text-base text-gray-600 mb-4">{message.tariffData.description}</p>
+                        <div className="mb-6">
+                          <h4 className="text-xs md:text-sm text-gray-500 mb-3">Что входит в тариф:</h4>
+                          <div className="space-y-2">
+                            {message.tariffData.services.map((service, index) => (
+                              <div key={index} className="flex items-start gap-2">
+                                <Check className="w-4 h-4 md:w-5 md:h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                                <span className="text-xs md:text-sm text-gray-700">{service}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={handleBackToTariffs}
+                            className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-all duration-200 text-sm md:text-base"
+                          >
+                            Назад
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleSelectTariff(message.tariffData!.name)}
+                            className="flex-1 py-3 bg-gray-800 text-white rounded-full hover:bg-gray-900 transition-all duration-200 text-sm md:text-base"
+                          >
+                            Выбрать тариф
+                          </motion.button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Тариф выбран */}
+                    {message.type === 'tariff-selected' && (
+                      <div className="p-4 md:p-6 bg-white border-2 border-green-300 rounded-xl shadow-lg">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                            <Check className="w-5 h-5 text-green-600" />
+                          </div>
+                          <p className="text-sm md:text-base text-gray-700">Тариф успешно выбран!</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            ))}
+
+            {/* Индикатор печатания */}
+            {isTyping && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex justify-start"
+              >
+                <div className="bg-white border border-gray-200 shadow-sm rounded-2xl px-4 py-3">
+                  <div className="flex gap-1">
+                    <motion.span
+                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: 0 }}
+                      className="w-2 h-2 bg-gray-400 rounded-full"
+                    />
+                    <motion.span
+                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
+                      className="w-2 h-2 bg-gray-400 rounded-full"
+                    />
+                    <motion.span
+                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
+                      className="w-2 h-2 bg-gray-400 rounded-full"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        {/* Поле ввода */}
+        <div className="flex-shrink-0 p-4 md:p-6 border-t border-gray-200 bg-white">
+          <div className="max-w-4xl mx-auto w-full">
+            <div className="relative bg-gray-50 border border-gray-200 rounded-2xl p-3 md:p-4 focus-within:border-gray-400 focus-within:bg-white transition-all duration-200">
+              {/* Быстрые действия внутри поля ввода */}
+              <div className="mb-3 pb-3 border-b border-gray-200/50">
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1 -mx-1 px-1">
+                  {quickActions.filter(action => action.id !== lastClickedActionId).map((action) => (
+                    <motion.button
+                      key={action.id}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleQuickAction(action.text, action.id)}
+                      className="px-3 py-1.5 bg-white/50 border border-gray-300/50 rounded-full text-gray-600 text-xs hover:bg-white hover:border-gray-400/50 transition-all duration-200 flex-shrink-0 snap-start whitespace-nowrap"
+                    >
+                      {action.text}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Поле ввода и кнопка отправки */}
+              <div className="flex gap-3 items-center">
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Напишите ваш вопрос..."
+                  className="flex-1 bg-transparent text-gray-900 placeholder-gray-400 focus:outline-none text-sm md:text-base"
+                />
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleSendMessage}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-800 text-white hover:bg-gray-900 hover:shadow-lg transition-all duration-200 flex-shrink-0"
+                >
+                  <Send className="w-4 h-4" />
+                </motion.button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
