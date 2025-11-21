@@ -1,6 +1,6 @@
 import { Check } from './Icons';
 import { cn } from './ui/utils';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 
 interface Step {
   id: string;
