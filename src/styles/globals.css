@@ -299,6 +299,17 @@
     font-weight: 800;
     letter-spacing: -0.02em;
   }
+  
+  /* Stepper overlay positioning - responsive */
+  .stepper-overlay-position {
+    margin-top: -35%;
+  }
+  
+  @media (min-width: 768px) {
+    .stepper-overlay-position {
+      margin-top: -25%;
+    }
+  }
 }
 
 /**

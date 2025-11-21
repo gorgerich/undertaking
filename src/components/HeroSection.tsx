@@ -20,18 +20,18 @@ export function HeroSection() {
           {/* Text Content */}
           <div className="relative h-full flex flex-col items-center justify-center px-6 text-center -translate-y-[15%]">
             {/* Main Heading */}
-            <h1 className="text-white mb-4 max-w-3xl tracking-tight drop-shadow-2xl" style={{ fontFamily: 'var(--font-family-serif)', textShadow: '0 4px 20px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.6)' }}>
+            <h1 className="text-white mb-4 max-w-3xl tracking-tight drop-shadow-2xl mx-auto" style={{ fontFamily: 'var(--font-family-serif)', textShadow: '0 4px 20px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.6)' }}>
               {/* Mobile version */}
-              <span className="md:hidden block text-2xl" style={{ maxWidth: '320px' }}>
-                Самостоятельная организация прощания без агентств и давления
+              <span className="md:hidden block text-2xl mx-auto" style={{ maxWidth: '340px', fontWeight: 40, transform: 'translateY(20%)' }}>
+                Цифровой помощник по самостоятельной организации прощания без агентств и давления
               </span>
               {/* Desktop version */}
-              <span className="hidden md:block" style={{ fontFamily: 'var(--font-family-display)' }}>
-                <span className="block text-4xl lg:text-5xl mb-1">
-                  Самостоятельная организация
+              <span className="hidden md:block" style={{ fontFamily: 'var(--font-family-display)', fontWeight: 40 }}>
+                <span className="block text-3xl lg:text-4xl xl:text-5xl mb-1">
+                  Цифровой помощник по самостоятельной
                 </span>
-                <span className="block text-4xl lg:text-5xl">
-                  прощания без агентств и давления
+                <span className="block text-3xl lg:text-4xl xl:text-5xl">
+                  организации прощания без агентств и давления
                 </span>
               </span>
             </h1>

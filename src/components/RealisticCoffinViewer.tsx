@@ -1,274 +1,354 @@
 import { useRef, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment, ContactShadows, useTexture } from '@react-three/drei';
+import * as THREE from 'three';
 
-export interface WoodType {
+export interface WoodMaterial {
   id: string;
   name: string;
-  texture: string;
-  color: string;
   price: number;
+  color: string;
+  texture: string;
+  roughness: number;
 }
 
-export interface LiningType {
+export interface LiningMaterial {
   id: string;
   name: string;
-  texture: string;
-  color: string;
   price: number;
+  color: string;
+  texture: string; // Для UI превью
+  fabric: string;
 }
 
-export interface HardwareType {
+export interface HardwareMaterial {
   id: string;
   name: string;
-  color: string;
-  metallic: string;
   price: number;
+  color: string;
+  metalness: number;
+  roughness: number;
+  metallic: string; // CSS градиент для UI
 }
 
 interface RealisticCoffinViewerProps {
-  wood: WoodType;
-  lining: LiningType;
-  hardware: HardwareType;
-  showLid?: boolean;
+  wood: WoodMaterial;
+  lining: LiningMaterial;
+  hardware: HardwareMaterial;
+  showLid: boolean;
 }
 
-// 3D модель гроба
+export const woodTypes: WoodMaterial[] = [
+  { 
+    id: 'pine', 
+    name: 'Сосна (Натуральная)', 
+    price: 0, 
+    color: '#E5C4A0', 
+    texture: 'https://images.unsplash.com/photo-1595814433015-e6f5ce69614e?w=400', 
+    roughness: 0.6 
+  },
+  { 
+    id: 'oak', 
+    name: 'Дуб Мореный', 
+    price: 25000, 
+    color: '#6F4E37', 
+    texture: 'https://images.unsplash.com/photo-1610312278520-bcc893a3ff1d?w=400', 
+    roughness: 0.7 
+  },
+  { 
+    id: 'mahogany', 
+    name: 'Красное Дерево', 
+    price: 55000, 
+    color: '#4A0404', 
+    texture: 'https://images.unsplash.com/photo-1543459176-442bfb743b8d?w=400', 
+    roughness: 0.4 
+  },
+  { 
+    id: 'white', 
+    name: 'Элитный Белый', 
+    price: 45000, 
+    color: '#F5F5F5', 
+    texture: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=400', 
+    roughness: 0.2 
+  },
+  { 
+    id: 'walnut', 
+    name: 'Американский Орех', 
+    price: 35000, 
+    color: '#5D4037', 
+    texture: 'https://images.unsplash.com/photo-1513360371669-4adf3dd7dff8?w=400', 
+    roughness: 0.6 
+  },
+  { 
+    id: 'black', 
+    name: 'Черный Рояльный', 
+    price: 60000, 
+    color: '#1a1a1a', 
+    texture: 'https://images.unsplash.com/photo-1618464530077-8c65f440df5c?w=400', 
+    roughness: 0.1 
+  },
+];
+
+export const liningTypes: LiningMaterial[] = [
+  { 
+    id: 'satin-white', 
+    name: 'Атлас (Белый)', 
+    price: 0, 
+    color: '#FFFFFF', 
+    texture: 'https://images.unsplash.com/photo-1564815662616-402585b0026d?w=400', 
+    fabric: 'satin' 
+  },
+  { 
+    id: 'silk-champagne', 
+    name: 'Шелк (Шампань)', 
+    price: 5000, 
+    color: '#F7E7CE', 
+    texture: 'https://images.unsplash.com/photo-1575220652470-50d7a6094747?w=400', 
+    fabric: 'silk' 
+  },
+  { 
+    id: 'velvet-red', 
+    name: 'Бархат (Бордо)', 
+    price: 8000, 
+    color: '#580000', 
+    texture: 'https://images.unsplash.com/photo-1616606889941-4c2821831e22?w=400', 
+    fabric: 'velvet' 
+  },
+  { 
+    id: 'satin-blue', 
+    name: 'Атлас (Небесный)', 
+    price: 3000, 
+    color: '#F0F8FF', 
+    texture: 'https://images.unsplash.com/photo-1564815662616-402585b0026d?w=400&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8c2F0aW4lMjBmYWJyaWN8ZW58MHx8MHx8fDA%3D', 
+    fabric: 'satin' 
+  },
+  { 
+    id: 'silk-gold', 
+    name: 'Шелк (Золотой)', 
+    price: 6000, 
+    color: '#FFD700', 
+    texture: 'https://images.unsplash.com/photo-1575220652470-50d7a6094747?w=400&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8c2lsayUyMGZhYnJpY3xlbnwwfHwwfHx8MA%3D%3D', 
+    fabric: 'silk' 
+  },
+  { 
+    id: 'velvet-black', 
+    name: 'Бархат (Черный)', 
+    price: 9000, 
+    color: '#000000', 
+    texture: 'https://images.unsplash.com/photo-1616606889941-4c2821831e22?w=400&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8dmVsdmV0JTIwZmFicmljfGVufDB8fDB8fHww', 
+    fabric: 'velvet' 
+  },
+];
+
+export const hardwareTypes: HardwareMaterial[] = [
+  { 
+    id: 'gold', 
+    name: 'Золото (Классика)', 
+    price: 0, 
+    color: '#FFD700', 
+    metalness: 1.0, 
+    roughness: 0.2, 
+    metallic: 'linear-gradient(135deg, #FDB931 0%, #FFFFAC 50%, #D1B464 100%)' 
+  },
+  { 
+    id: 'silver', 
+    name: 'Серебро (Модерн)', 
+    price: 3000, 
+    color: '#C0C0C0', 
+    metalness: 1.0, 
+    roughness: 0.3, 
+    metallic: 'linear-gradient(135deg, #E0E0E0 0%, #FFFFFF 50%, #A0A0A0 100%)' 
+  },
+  { 
+    id: 'bronze', 
+    name: 'Античная Бронза', 
+    price: 4500, 
+    color: '#CD7F32', 
+    metalness: 0.9, 
+    roughness: 0.5, 
+    metallic: 'linear-gradient(135deg, #CD7F32 0%, #D2691E 50%, #8B4513 100%)' 
+  },
+  { 
+    id: 'black-matte', 
+    name: 'Черный Мат', 
+    price: 5000, 
+    color: '#2D2D2D', 
+    metalness: 0.5, 
+    roughness: 0.8, 
+    metallic: 'linear-gradient(135deg, #434343 0%, #000000 100%)' 
+  },
+  { 
+    id: 'rose-gold', 
+    name: 'Розовое Золото', 
+    price: 6000, 
+    color: '#B76E79', 
+    metalness: 1.0, 
+    roughness: 0.2, 
+    metallic: 'linear-gradient(135deg, #E0C3FC 0%, #8EC5FC 100%)' // Placeholder gradient, rose gold is tricky
+  },
+  { 
+    id: 'chrome', 
+    name: 'Хром', 
+    price: 4000, 
+    color: '#E0E0E0', 
+    metalness: 1.0, 
+    roughness: 0.1, 
+    metallic: 'linear-gradient(135deg, #F5F7FA 0%, #C3CFE2 100%)' 
+  },
+];
+
 function CoffinModel({ wood, lining, hardware, showLid }: RealisticCoffinViewerProps) {
-  // Основной корпус гроба (шестиугольная форма)
+  const groupRef = useRef<THREE.Group>(null);
+  
+  // В реальном проекте здесь была бы загрузка GLTF модели
+  // Для демонстрации используем примитивы Three.js с материалами
+  
   return (
-    <group position={[0, 0, 0]}>
-      {/* Основной корпус */}
-      <mesh position={[0, 0, 0]} castShadow receiveShadow>
-        <boxGeometry args={[2, 0.5, 3]} />
-        <meshStandardMaterial
+    <group ref={groupRef} position={[0, -0.5, 0]}>
+      {/* Основной корпус гроба */}
+      <mesh castShadow receiveShadow position={[0, 0.4, 0]}>
+        <boxGeometry args={[2.2, 0.6, 0.8]} />
+        <meshStandardMaterial 
           color={wood.color}
-          roughness={0.4}
+          roughness={wood.roughness}
           metalness={0.1}
         />
       </mesh>
 
-      {/* Боковые панели (трапециевидные) */}
-      <mesh position={[1.1, 0, 0.5]} rotation={[0, 0, Math.PI / 12]} castShadow>
-        <boxGeometry args={[0.2, 0.5, 2]} />
-        <meshStandardMaterial color={wood.color} roughness={0.4} metalness={0.1} />
-      </mesh>
-      <mesh position={[-1.1, 0, 0.5]} rotation={[0, 0, -Math.PI / 12]} castShadow>
-        <boxGeometry args={[0.2, 0.5, 2]} />
-        <meshStandardMaterial color={wood.color} roughness={0.4} metalness={0.1} />
+      {/* Внутренняя обивка (видна только если крышка открыта или отсутствует) */}
+      <mesh position={[0, 0.45, 0]}>
+        <boxGeometry args={[2.1, 0.5, 0.7]} />
+        <meshStandardMaterial 
+          color={lining.color}
+          roughness={0.9}
+          metalness={0.0}
+        />
       </mesh>
 
-      {/* Крышка */}
+      {/* Крышка гроба */}
       {showLid && (
-        <mesh position={[0, 0.3, 0]} castShadow>
-          <boxGeometry args={[2.1, 0.15, 3.1]} />
-          <meshStandardMaterial
+        <mesh castShadow receiveShadow position={[0, 1.0, 0]}>
+           {/* Упрощенная форма крышки */}
+          <boxGeometry args={[2.25, 0.2, 0.85]} />
+          <meshStandardMaterial 
             color={wood.color}
-            roughness={0.3}
-            metalness={0.15}
+            roughness={wood.roughness}
+            metalness={0.1}
           />
         </mesh>
       )}
 
-      {/* Внутренняя обивка (если крышка открыта) */}
-      {!showLid && (
-        <>
-          <mesh position={[0, 0.2, 0]}>
-            <boxGeometry args={[1.9, 0.05, 2.9]} />
-            <meshStandardMaterial color={lining.color} roughness={0.8} metalness={0.0} />
-          </mesh>
-          <mesh position={[0, 0.4, -1.4]} rotation={[Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[1.9, 0.4]} />
-            <meshStandardMaterial color={lining.color} side={2} roughness={0.8} />
-          </mesh>
-        </>
-      )}
-
-      {/* Ручки (фурнитура) */}
-      {[
-        [-0.9, 0, 1],
-        [-0.9, 0, -1],
-        [0.9, 0, 1],
-        [0.9, 0, -1],
-      ].map((pos, i) => (
-        <group key={i} position={pos as [number, number, number]}>
+      {/* Ручки (Фурнитура) */}
+      {[-0.8, 0, 0.8].map((x, i) => (
+        <group key={i} position={[x, 0.4, 0.42]}>
           <mesh castShadow>
-            <torusGeometry args={[0.08, 0.02, 8, 16]} />
-            <meshStandardMaterial
+            <cylinderGeometry args={[0.05, 0.05, 0.4, 16]} rotation={[Math.PI / 2, 0, 0]} />
+            <meshStandardMaterial 
               color={hardware.color}
-              roughness={0.2}
-              metalness={0.9}
-            />
-          </mesh>
-          <mesh position={[0, 0, -0.05]}>
-            <cylinderGeometry args={[0.03, 0.03, 0.1, 16]} />
-            <meshStandardMaterial
-              color={hardware.color}
-              roughness={0.2}
-              metalness={0.9}
+              metalness={hardware.metalness}
+              roughness={hardware.roughness}
             />
           </mesh>
         </group>
       ))}
-
-      {/* Декоративные элементы на крышке */}
-      {showLid && (
-        <>
-          <mesh position={[0, 0.38, 0]} castShadow>
-            <boxGeometry args={[1.8, 0.02, 0.05]} />
-            <meshStandardMaterial color={hardware.color} roughness={0.2} metalness={0.9} />
+      {[-0.8, 0, 0.8].map((x, i) => (
+         <group key={`back-${i}`} position={[x, 0.4, -0.42]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.05, 0.05, 0.4, 16]} rotation={[Math.PI / 2, 0, 0]} />
+            <meshStandardMaterial 
+              color={hardware.color}
+              metalness={hardware.metalness}
+              roughness={hardware.roughness}
+            />
           </mesh>
-          <mesh position={[0, 0.38, 1]} castShadow>
-            <boxGeometry args={[1.8, 0.02, 0.05]} />
-            <meshStandardMaterial color={hardware.color} roughness={0.2} metalness={0.9} />
-          </mesh>
-          <mesh position={[0, 0.38, -1]} castShadow>
-            <boxGeometry args={[1.8, 0.02, 0.05]} />
-            <meshStandardMaterial color={hardware.color} roughness={0.2} metalness={0.9} />
-          </mesh>
-        </>
-      )}
+        </group>
+      ))}
     </group>
   );
 }
 
-export const woodTypes: WoodType[] = [
-  {
-    id: 'pine',
-    name: 'Сосна',
-    texture: 'https://images.unsplash.com/photo-1506968430777-bf7784a87f23?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3b29kJTIwZ3JhaW4lMjB0ZXh0dXJlfGVufDF8fHx8MTc2MTk3OTY0Nnww&ixlib=rb-4.1.0&q=80&w=1080',
-    color: '#8B7355',
-    price: 0,
-  },
-  {
-    id: 'oak',
-    name: 'Дуб',
-    texture: 'https://images.unsplash.com/photo-1525947088131-b701cd0f6dc3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkYXJrJTIwd29vZCUyMHRleHR1cmV8ZW58MXx8fHwxNzYxOTkwMDc2fDA&ixlib=rb-4.1.0&q=80&w=1080',
-    color: '#654321',
-    price: 15000,
-  },
-  {
-    id: 'mahogany',
-    name: 'Красное дерево',
-    texture: 'https://images.unsplash.com/photo-1506368149354-b45e5f4a5595?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZWQlMjB3b29kJTIwdGV4dHVyZXxlbnwxfHx8fDE3NjE5OTAwODZ8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    color: '#4A0E0E',
-    price: 35000,
-  },
-];
-
-export const liningTypes: LiningType[] = [
-  {
-    id: 'satin-white',
-    name: 'Атлас белый',
-    texture: 'https://images.unsplash.com/photo-1504198458649-3128b932f49e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3aGl0ZSUyMHNhdGluJTIwZmFicmljfGVufDF8fHx8MTc2MTk5MDEwMXww&ixlib=rb-4.1.0&q=80&w=1080',
-    color: '#F8F8F8',
-    price: 0,
-  },
-  {
-    id: 'velvet-burgundy',
-    name: 'Бархат бордовый',
-    texture: 'https://images.unsplash.com/photo-1601924994987-69e26d50dc26?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZWQlMjB2ZWx2ZXQlMjBmYWJyaWN8ZW58MXx8fHwxNzYxOTkwMTE0fDA&ixlib=rb-4.1.0&q=80&w=1080',
-    color: '#800020',
-    price: 8000,
-  },
-  {
-    id: 'silk-gold',
-    name: 'Шёлк золотой',
-    texture: 'https://images.unsplash.com/photo-1509043759401-136742328bb3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxnb2xkJTIwc2lsayUyMGZhYnJpY3xlbnwxfHx8fDE3NjE5OTAxMjR8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    color: '#FFD700',
-    price: 15000,
-  },
-];
-
-export const hardwareTypes: HardwareType[] = [
-  {
-    id: 'brass',
-    name: 'Латунь',
-    color: '#B5A642',
-    metallic: 'golden',
-    price: 0,
-  },
-  {
-    id: 'silver',
-    name: 'Серебро',
-    color: '#C0C0C0',
-    metallic: 'silver',
-    price: 5000,
-  },
-  {
-    id: 'gold',
-    name: 'Золото',
-    color: '#FFD700',
-    metallic: 'golden',
-    price: 12000,
-  },
-];
-
-export function RealisticCoffinViewer({ wood, lining, hardware, showLid = true }: RealisticCoffinViewerProps) {
+export function RealisticCoffinViewer({ wood, lining, hardware, showLid }: RealisticCoffinViewerProps) {
   return (
-    <div className="relative w-full h-full bg-gradient-to-br from-gray-100 via-gray-50 to-white rounded-2xl overflow-hidden border border-gray-200">
-      <Canvas shadows gl={{ alpha: true }}>
-        <color attach="background" args={['#f5f5f5']} />
+    <div className="relative w-full h-full bg-[#1a1c23] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+      {/* Атмосферный градиент для глубины */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/60 pointer-events-none z-10" />
+      
+      <Canvas shadows dpr={[1, 2]} gl={{ antialias: true, preserveDrawingBuffer: true }}>
+        <color attach="background" args={['#1a1c23']} />
+        
+        {/* Окружение для реалистичных отражений (Lobby создает атмосферу зала) */}
+        <Environment preset="lobby" blur={0.6} background={false} />
+        
         <Suspense fallback={null}>
-          {/* Камера */}
-          <PerspectiveCamera makeDefault position={[4, 3, 4]} fov={50} />
+          <PerspectiveCamera makeDefault position={[3.5, 2.5, 3.5]} fov={40} />
           <OrbitControls
             enablePan={false}
             enableZoom={true}
             minPolarAngle={Math.PI / 4}
-            maxPolarAngle={Math.PI / 2}
-            minDistance={5}
-            maxDistance={10}
+            maxPolarAngle={Math.PI / 2.1}
+            minDistance={3.5}
+            maxDistance={9}
             autoRotate
-            autoRotateSpeed={1}
+            autoRotateSpeed={0.3}
+            target={[0, 0.15, 0]}
           />
 
-          {/* Освещение - увеличенная интенсивность для светлой сцены */}
-          <ambientLight intensity={0.8} />
-          <directionalLight
-            position={[5, 10, 5]}
-            intensity={2.0}
-            castShadow
-            shadow-mapSize-width={2048}
-            shadow-mapSize-height={2048}
-          />
+          {/* Освещение: Мягкое, торжественное, с акцентами */}
+          <ambientLight intensity={0.3} color="#ffffff" />
+          
+          {/* Теплый рисующий свет (имитация ламп зала) */}
           <spotLight
-            position={[-5, 8, -5]}
+            position={[5, 8, 5]}
             intensity={1.2}
-            angle={0.3}
+            angle={0.4}
             penumbra={1}
             castShadow
+            shadow-mapSize={[2048, 2048]}
+            shadow-bias={-0.0001}
+            color="#fff5e6"
           />
-          <pointLight position={[0, 3, 0]} intensity={0.8} color="#ffffff" />
+          
+          {/* Холодный контровой свет для объема */}
+          <spotLight
+            position={[-5, 4, -4]}
+            intensity={0.6}
+            angle={0.5}
+            penumbra={1}
+            color="#eef2ff"
+          />
+          
+          {/* Нижняя подсветка для смягчения теней */}
+          <pointLight position={[0, 1, 0]} intensity={0.2} color="#ffffff" />
 
-          {/* Модель гроба */}
           <CoffinModel wood={wood} lining={lining} hardware={hardware} showLid={showLid} />
 
-          {/* Тени - более мягкие для светлого фона */}
           <ContactShadows
-            position={[0, -0.3, 0]}
-            opacity={0.3}
-            scale={10}
+            position={[0, 0, 0]}
+            opacity={0.5}
+            scale={20}
             blur={2.5}
             far={4}
+            color="#000000"
           />
-
-          {/* Окружение для отражений */}
-          <Environment preset="apartment" />
         </Suspense>
       </Canvas>
 
-      {/* Информация о конфигурации */}
-      <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between gap-3 bg-white/90 backdrop-blur-md px-4 py-3 rounded-xl border border-gray-200 shadow-lg">
-        <div className="space-y-1 flex-1">
-          <p className="text-gray-900 text-sm">{wood.name}</p>
-          <div className="flex gap-3 text-xs text-gray-600">
-            <span>Обивка: {lining.name}</span>
-            <span>•</span>
-            <span>Фурнитура: {hardware.name}</span>
+      {/* Информация о конфигурации - Liquid Glass Style */}
+      <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between gap-4 bg-white/5 backdrop-blur-xl px-6 py-4 rounded-2xl border border-white/10 shadow-2xl z-20">
+        <div className="space-y-1.5 flex-1">
+          <p className="text-white font-medium text-lg tracking-wide">{wood.name}</p>
+          <div className="flex flex-wrap gap-y-1 gap-x-3 text-sm text-gray-300/80 font-light">
+            <span className="flex items-center gap-1.5">
+               <span className="w-1 h-1 rounded-full bg-white/50" />
+               Обивка: {lining.name}
+            </span>
+            <span className="flex items-center gap-1.5">
+               <span className="w-1 h-1 rounded-full bg-white/50" />
+               Фурнитура: {hardware.name}
+            </span>
           </div>
         </div>
-        <div className="text-xs text-gray-700 bg-gray-100 px-3 py-1.5 rounded-lg">
+        <div className="text-xs font-medium text-white/90 bg-white/10 px-4 py-2 rounded-lg border border-white/5 backdrop-blur-md uppercase tracking-wider">
           {showLid ? 'Закрытый' : 'Открытый'}
         </div>
       </div>

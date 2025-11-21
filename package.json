@@ -33,6 +33,7 @@
           "clsx": "*",
           "cmdk": "*",
           "embla-carousel-react": "*",
+          "framer-motion": "*",
           "input-otp": "*",
           "lucide-react": "^0.487.0",
           "motion": "*",
@@ -46,6 +47,7 @@
           "recharts": "*",
           "sonner": "^2.0.3",
           "tailwind-merge": "*",
+          "three": "*",
           "vaul": "*",
           "vite": "*"
       },

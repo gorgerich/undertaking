@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Plus, Minus, Check } from './Icons';
 import { CoffinMockup } from './CoffinMockup';
-import { RealisticCoffinViewer, woodTypes, liningTypes, hardwareTypes } from './RealisticCoffinViewer';
+import { RealisticCoffinViewer, woodTypes, liningTypes, hardwareTypes, WoodMaterial, LiningMaterial, HardwareMaterial } from './RealisticCoffinViewer';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface ConfiguratorOption {
@@ -24,9 +24,9 @@ export function UnifiedCoffinConfigurator({ onConfirm }: UnifiedCoffinConfigurat
   const [activeTab, setActiveTab] = useState<'coffin' | 'wreath'>('coffin');
   
   // Состояние для реалистичного визуализатора
-  const [selectedWood, setSelectedWood] = useState(woodTypes[0]);
-  const [selectedLining, setSelectedLining] = useState(liningTypes[0]);
-  const [selectedHardware, setSelectedHardware] = useState(hardwareTypes[0]);
+  const [selectedWood, setSelectedWood] = useState<WoodMaterial>(woodTypes[0]);
+  const [selectedLining, setSelectedLining] = useState<LiningMaterial>(liningTypes[0]);
+  const [selectedHardware, setSelectedHardware] = useState<HardwareMaterial>(hardwareTypes[0]);
   const [showLid, setShowLid] = useState(true);
   
   // Состояние для гроба (старое - оставлено для совместимости)
@@ -83,8 +83,8 @@ export function UnifiedCoffinConfigurator({ onConfirm }: UnifiedCoffinConfigurat
 
   // Расчет цены
   const getCoffinPrice = () => {
-    const material = coffinOptions.find(m => m.id === coffinMaterial);
-    return (material?.price || 15000) * coffinQuantity;
+    const basePrice = 15000; // Базовая цена корпуса
+    return (basePrice + selectedWood.price + selectedLining.price + selectedHardware.price) * coffinQuantity;
   };
 
   const getWreathPrice = () => {
@@ -108,8 +108,9 @@ export function UnifiedCoffinConfigurator({ onConfirm }: UnifiedCoffinConfigurat
   const handleConfirm = () => {
     const data = {
       coffin: {
-        material: coffinMaterial,
-        color: coffinColor,
+        wood: selectedWood,
+        lining: selectedLining,
+        hardware: selectedHardware,
         quantity: coffinQuantity,
         price: getCoffinPrice(),
       },
@@ -161,10 +162,10 @@ export function UnifiedCoffinConfigurator({ onConfirm }: UnifiedCoffinConfigurat
 
         {/* Coffin Tab */}
         <TabsContent value="coffin" className="mt-0">
-          <div className="p-6 space-y-6">
+          <div className="p-6 space-y-8">
             {/* 3D Visualization - Гипер-реалистичный визуализатор */}
-            <div className="bg-gradient-to-br from-gray-50 via-white to-gray-100 rounded-2xl overflow-hidden shadow-xl border border-gray-200">
-              <div className="aspect-[4/3] relative">
+            <div className="bg-[#1a1c23] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 relative group">
+              <div className="aspect-[16/9] md:aspect-[2/1] relative">
                 {activeTab === 'coffin' && (
                   <RealisticCoffinViewer
                     key={`viewer-${selectedWood.id}-${selectedLining.id}-${selectedHardware.id}`}
@@ -175,36 +176,39 @@ export function UnifiedCoffinConfigurator({ onConfirm }: UnifiedCoffinConfigurat
                   />
                 )}
                 
-                {/* Переключатель крышки */}
-                <div className="absolute top-4 left-4 flex gap-2 bg-white/90 backdrop-blur-sm rounded-lg p-1 border border-gray-200 shadow-md z-10">
+                {/* Переключатель крышки - Floating Glass Control */}
+                <div className="absolute top-4 left-4 flex gap-1 bg-white/5 backdrop-blur-md rounded-xl p-1 border border-white/10 shadow-lg z-10">
                   <button
                     onClick={() => setShowLid(true)}
-                    className={`px-3 py-1.5 rounded text-xs transition-all ${
+                    className={`px-4 py-2 rounded-lg text-xs font-medium transition-all duration-300 ${
                       showLid 
-                        ? 'bg-gray-900 text-white shadow-sm' 
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ? 'bg-white text-slate-900 shadow-sm' 
+                        : 'text-white/70 hover:text-white hover:bg-white/10'
                     }`}
                   >
-                    Закрыт
+                    Закрытый
                   </button>
                   <button
                     onClick={() => setShowLid(false)}
-                    className={`px-3 py-1.5 rounded text-xs transition-all ${
+                    className={`px-4 py-2 rounded-lg text-xs font-medium transition-all duration-300 ${
                       !showLid 
-                        ? 'bg-gray-900 text-white shadow-sm' 
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ? 'bg-white text-slate-900 shadow-sm' 
+                        : 'text-white/70 hover:text-white hover:bg-white/10'
                     }`}
                   >
-                    Открыт
+                    Открытый
                   </button>
                 </div>
               </div>
             </div>
 
             {/* Material Selection - Порода дерева */}
-            <div className="space-y-3">
-              <Label className="text-gray-900">Порода дерева</Label>
-              <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium text-gray-900">Порода дерева</Label>
+                <span className="text-xs text-gray-500 uppercase tracking-wider font-medium">Материал корпуса</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {woodTypes.map((wood) => (
                   <button
                     key={wood.id}
@@ -212,28 +216,31 @@ export function UnifiedCoffinConfigurator({ onConfirm }: UnifiedCoffinConfigurat
                       setSelectedWood(wood);
                       setCoffinMaterial(wood.id);
                     }}
-                    className={`relative flex flex-col items-center gap-2 p-4 bg-white border-2 rounded-xl cursor-pointer transition-all hover:border-amber-300 hover:shadow-md ${
+                    className={`group relative rounded-2xl overflow-hidden transition-all duration-300 text-left ${
                       selectedWood.id === wood.id
-                        ? 'border-amber-500 bg-amber-50 shadow-lg'
-                        : 'border-gray-200'
+                        ? 'ring-2 ring-blue-600 ring-offset-2 shadow-xl scale-[1.02]'
+                        : 'ring-1 ring-gray-200 hover:ring-gray-300 hover:shadow-lg hover:-translate-y-0.5'
                     }`}
                   >
-                    <div className="relative w-full h-20 rounded-lg overflow-hidden">
+                    <div className="aspect-[4/3] w-full relative">
                       <ImageWithFallback
                         src={wood.texture}
                         alt={wood.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
+                      
                       {selectedWood.id === wood.id && (
-                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
-                          <Check className="w-4 h-4 text-white" />
+                        <div className="absolute top-3 right-3 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center shadow-lg animate-in zoom-in">
+                          <Check className="w-3.5 h-3.5 text-white" />
                         </div>
                       )}
-                    </div>
-                    <div className="text-center">
-                      <div className="text-sm text-gray-900">{wood.name}</div>
-                      <div className="text-xs text-gray-500">
-                        {wood.price === 0 ? 'Базовая' : `+${wood.price.toLocaleString('ru-RU')} ₽`}
+                      
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <div className="text-white font-medium text-sm truncate">{wood.name}</div>
+                        <div className="text-white/80 text-xs font-light">
+                          {wood.price === 0 ? 'Включено' : `+${wood.price.toLocaleString('ru-RU')} ₽`}
+                        </div>
                       </div>
                     </div>
                   </button>
@@ -242,35 +249,41 @@ export function UnifiedCoffinConfigurator({ onConfirm }: UnifiedCoffinConfigurat
             </div>
 
             {/* Lining Selection - Внутренняя отделка */}
-            <div className="space-y-3">
-              <Label className="text-gray-900">Внутренняя отделка</Label>
-              <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium text-gray-900">Внутренняя отделка</Label>
+                <span className="text-xs text-gray-500 uppercase tracking-wider font-medium">Ткань и цвет</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {liningTypes.map((lining) => (
                   <button
                     key={lining.id}
                     onClick={() => setSelectedLining(lining)}
-                    className={`relative flex flex-col items-center gap-2 p-4 bg-white border-2 rounded-xl cursor-pointer transition-all hover:border-purple-300 hover:shadow-md ${
+                    className={`group relative rounded-2xl overflow-hidden transition-all duration-300 text-left ${
                       selectedLining.id === lining.id
-                        ? 'border-purple-500 bg-purple-50 shadow-lg'
-                        : 'border-gray-200'
+                        ? 'ring-2 ring-purple-600 ring-offset-2 shadow-xl scale-[1.02]'
+                        : 'ring-1 ring-gray-200 hover:ring-gray-300 hover:shadow-lg hover:-translate-y-0.5'
                     }`}
                   >
-                    <div className="relative w-full h-20 rounded-lg overflow-hidden">
+                    <div className="aspect-[4/3] w-full relative">
                       <ImageWithFallback
                         src={lining.texture}
                         alt={lining.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       />
+                      <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+                      
                       {selectedLining.id === lining.id && (
-                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
-                          <Check className="w-4 h-4 text-white" />
+                        <div className="absolute top-3 right-3 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center shadow-lg animate-in zoom-in">
+                          <Check className="w-3.5 h-3.5 text-white" />
                         </div>
                       )}
-                    </div>
-                    <div className="text-center">
-                      <div className="text-sm text-gray-900">{lining.name}</div>
-                      <div className="text-xs text-gray-500">
-                        {lining.price === 0 ? 'Базовая' : `+${lining.price.toLocaleString('ru-RU')} ₽`}
+
+                      <div className="absolute bottom-0 inset-x-0 p-3 bg-white/90 backdrop-blur-sm border-t border-white/50">
+                        <div className="text-gray-900 font-medium text-sm truncate">{lining.name}</div>
+                        <div className="text-gray-500 text-xs">
+                          {lining.price === 0 ? 'Включено' : `+${lining.price.toLocaleString('ru-RU')} ₽`}
+                        </div>
                       </div>
                     </div>
                   </button>
@@ -279,66 +292,47 @@ export function UnifiedCoffinConfigurator({ onConfirm }: UnifiedCoffinConfigurat
             </div>
 
             {/* Hardware Selection - Фурнитура */}
-            <div className="space-y-3">
-              <Label className="text-gray-900">Фурнитура (ручки и декор)</Label>
-              <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium text-gray-900">Фурнитура</Label>
+                <span className="text-xs text-gray-500 uppercase tracking-wider font-medium">Ручки и декор</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {hardwareTypes.map((hardware) => (
                   <button
                     key={hardware.id}
                     onClick={() => setSelectedHardware(hardware)}
-                    className={`relative flex flex-col items-center gap-2 p-4 bg-white border-2 rounded-xl cursor-pointer transition-all hover:border-yellow-300 hover:shadow-md ${
+                    className={`group relative rounded-2xl overflow-hidden transition-all duration-300 text-left bg-white ${
                       selectedHardware.id === hardware.id
-                        ? 'border-yellow-500 bg-yellow-50 shadow-lg'
-                        : 'border-gray-200'
+                        ? 'ring-2 ring-amber-500 ring-offset-2 shadow-xl scale-[1.02]'
+                        : 'ring-1 ring-gray-200 hover:ring-gray-300 hover:shadow-lg hover:-translate-y-0.5'
                     }`}
                   >
                     <div 
-                      className="w-full h-20 rounded-lg flex items-center justify-center relative overflow-hidden"
+                      className="aspect-[2/1] w-full relative flex items-center justify-center overflow-hidden"
                       style={{ background: hardware.metallic }}
                     >
-                      {/* Имитация ручки */}
-                      <div className="w-12 h-8 rounded-full border-4 shadow-lg" style={{ borderColor: hardware.color }}>
-                        <div className="absolute inset-1 rounded-full border border-white/30" />
+                      {/* Эффект блеска */}
+                      <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-50" />
+                      
+                      {/* Имитация ручки - более реалистичная */}
+                      <div className="relative w-16 h-3 rounded-full shadow-sm" style={{ backgroundColor: hardware.color }}>
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/40 to-black/10" />
+                        <div className="absolute -left-1 -top-1 w-2 h-5 rounded-sm shadow-md" style={{ backgroundColor: hardware.color }} />
+                        <div className="absolute -right-1 -top-1 w-2 h-5 rounded-sm shadow-md" style={{ backgroundColor: hardware.color }} />
                       </div>
                       
                       {selectedHardware.id === hardware.id && (
-                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center z-10">
-                          <Check className="w-4 h-4 text-white" />
+                        <div className="absolute top-3 right-3 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center shadow-lg animate-in zoom-in z-10">
+                          <Check className="w-3.5 h-3.5 text-white" />
                         </div>
                       )}
                     </div>
-                    <div className="text-center">
-                      <div className="text-sm text-gray-900">{hardware.name}</div>
-                      <div className="text-xs text-gray-500">
-                        {hardware.price === 0 ? 'Базовая' : `+${hardware.price.toLocaleString('ru-RU')} ₽`}
+                    <div className="p-3 border-t border-gray-100">
+                      <div className="text-gray-900 font-medium text-sm truncate">{hardware.name}</div>
+                      <div className="text-gray-500 text-xs">
+                        {hardware.price === 0 ? 'Включено' : `+${hardware.price.toLocaleString('ru-RU')} ₽`}
                       </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Color Palette */}
-            <div className="space-y-3">
-              <Label className="text-gray-900">Цвет отделки</Label>
-              <div className="flex flex-wrap gap-3">
-                {coffinColors.map((color) => (
-                  <button
-                    key={color.id}
-                    onClick={() => setCoffinColor(color.hex)}
-                    className={`group relative w-12 h-12 rounded-full transition-all hover:scale-110 ${
-                      coffinColor === color.hex ? 'ring-4 ring-blue-500 ring-offset-2' : 'ring-2 ring-gray-200'
-                    }`}
-                    style={{ backgroundColor: color.hex }}
-                    title={color.name}
-                  >
-                    {coffinColor === color.hex && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Check className="w-6 h-6 text-white drop-shadow-lg" />
-                      </div>
-                    )}
-                    <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                      {color.name}
                     </div>
                   </button>
                 ))}
@@ -372,18 +366,30 @@ export function UnifiedCoffinConfigurator({ onConfirm }: UnifiedCoffinConfigurat
               </div>
             </div>
 
-            {/* Price */}
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl p-4 border border-blue-200">
-              <div className="flex items-center justify-between">
+            {/* Price Summary Block inside Tab */}
+            <div className="mt-8 p-6 rounded-2xl bg-slate-900 text-white shadow-2xl relative overflow-hidden">
+               {/* Декоративный фон */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-[80px] rounded-full pointer-events-none" />
+              
+              <div className="relative z-10 flex items-center justify-between">
                 <div>
-                  <div className="text-xs text-blue-600 mb-1">Стоимость гроба</div>
-                  <div className="text-2xl text-blue-900">
+                  <div className="text-blue-200 text-sm mb-1 font-medium">Итоговая стоимость комплектации</div>
+                  <div className="text-3xl font-light tracking-tight">
                     {getCoffinPrice().toLocaleString('ru-RU')} ₽
                   </div>
+                  <div className="text-slate-400 text-xs mt-2 flex gap-2">
+                    <span>{selectedWood.name}</span>
+                    <span>•</span>
+                    <span>{selectedLining.name}</span>
+                    <span>•</span>
+                    <span>{selectedHardware.name}</span>
+                  </div>
                 </div>
-                <svg className="w-12 h-12 text-blue-400 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
+                <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center border border-white/10">
+                   <svg className="w-6 h-6 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
@@ -531,30 +537,42 @@ export function UnifiedCoffinConfigurator({ onConfirm }: UnifiedCoffinConfigurat
       </Tabs>
 
       {/* Footer with Total and Confirm Button */}
-      <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-6 py-5 border-t border-gray-700">
-        <div className="flex items-start justify-between mb-4 gap-4">
-          <div>
-            <div className="text-xs text-gray-400 mb-1">Общая стоимость</div>
-            <div className="text-3xl text-white">
-              {getTotalPrice().toLocaleString('ru-RU')} ₽
+      <div className="bg-[#111318] px-5 py-6 border-t border-white/10">
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-6">
+          <div className="text-center sm:text-left">
+            <div className="text-xs text-gray-400 mb-1 font-medium uppercase tracking-wide">Итого к оплате</div>
+            <div className="text-3xl sm:text-4xl text-white font-light tracking-tight tabular-nums">
+              {getTotalPrice().toLocaleString('ru-RU')} <span className="text-xl text-gray-500 font-normal">₽</span>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-xs text-gray-400 mb-1">В комплект входит:</div>
-            <div className="text-sm text-gray-300">
-              Гроб ({coffinQuantity} шт.) + Венок ({wreathQuantity} шт.)
+          
+          <div className="flex flex-col items-center sm:items-end gap-1">
+            <div className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Комплектация</div>
+            <div className="flex items-center gap-2 text-sm text-gray-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+              <span>Гроб: {coffinQuantity}</span>
+              <span className="w-1 h-1 rounded-full bg-gray-600" />
+              <span>Венок: {wreathQuantity}</span>
             </div>
           </div>
         </div>
+
         <Button 
           onClick={handleConfirm}
-          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-6 rounded-xl shadow-lg hover:shadow-xl transition-all text-lg flex items-center justify-center"
+          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white py-4 sm:py-6 h-auto rounded-xl shadow-lg shadow-blue-900/30 transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] group"
         >
-          <Check className="w-5 h-5 mr-2" />
-          Подтвердить конфигурацию онлайн
+          <span className="flex flex-col items-center gap-1">
+            <span className="text-base sm:text-lg font-medium flex items-center gap-2">
+              <Check className="w-5 h-5" />
+              Подтвердить конфигурацию
+            </span>
+            <span className="text-[10px] sm:text-xs text-blue-200/80 font-normal">
+              Переход к оформлению заказа
+            </span>
+          </span>
         </Button>
-        <p className="text-xs text-gray-400 text-center mt-3">
-          Вы сможете уточнить детали после отправки
+        
+        <p className="text-[10px] sm:text-xs text-gray-500 text-center mt-4 font-medium">
+          Вы сможете уточнить детали заказа с менеджером после отправки заявки
         </p>
       </div>
     </div>

@@ -628,8 +628,9 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
   // Автоматический скролл вверх при смене шага
   useEffect(() => {
     // Скроллим только если шаг реально изменился (не при первой загрузке)
-    if (!isInitialMountRef.current && previousStepRef.current !== currentStep && containerRef.current) {
-      containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!isInitialMountRef.current && previousStepRef.current !== currentStep) {
+      // Используем только window.scrollTo для согласованного скроллинга
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     previousStepRef.current = currentStep;
   }, [currentStep]);
@@ -838,7 +839,9 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
   };
 
   const handleSkipField = (field: string) => {
-    onUpdateFormData(field, '—');
+    // Переключаем значение: если уже прочерк, то очищаем, если нет - ставим прочерк
+    const currentValue = formData[field as keyof typeof formData];
+    onUpdateFormData(field, currentValue === '—' ? '' : '—');
   };
 
   const handleNext = () => {
@@ -980,7 +983,10 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
                     onValueChange={(value) => handleInputChange('ceremonyType', value)}
                     className="space-y-3"
                   >
-                    <div className="flex items-start space-x-3 p-4 border rounded-full">
+                    <div className={cn(
+                      "flex items-start space-x-3 p-4 border rounded-full transition-all",
+                      formData.ceremonyType === 'civil' && "border-black bg-gray-50"
+                    )}>
                       <RadioGroupItem value="civil" id="civil" className="mt-0.5" />
                       <div className="flex-1">
                         <Label htmlFor="civil" className="cursor-pointer">
@@ -988,9 +994,11 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
                         </Label>
                         <p className="text-xs text-gray-500 mt-1">Без религиозных обрядов</p>
                       </div>
-                      <span className="text-sm text-gray-500">+0 ₽</span>
                     </div>
-                    <div className="flex items-start space-x-3 p-4 border rounded-full">
+                    <div className={cn(
+                      "flex items-start space-x-3 p-4 border rounded-full transition-all",
+                      formData.ceremonyType === 'religious' && "border-black bg-gray-50"
+                    )}>
                       <RadioGroupItem value="religious" id="religious" className="mt-0.5" />
                       <div className="flex-1">
                         <Label htmlFor="religious" className="cursor-pointer">
@@ -1000,7 +1008,10 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
                       </div>
                       <span className="text-sm text-gray-500">+15 000 ₽</span>
                     </div>
-                    <div className="flex items-start space-x-3 p-4 border rounded-full">
+                    <div className={cn(
+                      "flex items-start space-x-3 p-4 border rounded-full transition-all",
+                      formData.ceremonyType === 'combined' && "border-black bg-gray-50"
+                    )}>
                       <RadioGroupItem value="combined" id="combined" className="mt-0.5" />
                       <div className="flex-1">
                         <Label htmlFor="combined" className="cursor-pointer">
@@ -1012,25 +1023,6 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
                     </div>
                   </RadioGroup>
                 </div>
-
-                {formData.ceremonyType === 'religious' && (
-                  <div>
-                    <Label htmlFor="confession">Конфессия</Label>
-                    <Select value={formData.confession} onValueChange={(value) => handleInputChange('confession', value)}>
-                      <SelectTrigger className="mt-2">
-                        <SelectValue placeholder="Выберите конфессию" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="orthodox">Православие</SelectItem>
-                        <SelectItem value="catholic">Католицизм</SelectItem>
-                        <SelectItem value="islam">Ислам</SelectItem>
-                        <SelectItem value="judaism">Иудаизм</SelectItem>
-                        <SelectItem value="buddhism">Буддизм</SelectItem>
-                        <SelectItem value="other">Другое</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
 
                 {formData.ceremonyType === 'combined' && (
                   <div>
@@ -1596,7 +1588,7 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
           <div className="space-y-6">
             <div className="bg-blue-500/10 backdrop-blur-sm border border-blue-300/30 rounded-full p-4">
               <p className="text-sm text-blue-900">
-                Наст��ойте комплектацию с помощью 3D-визуализатора
+                Настройте комплектацию с помощью 3D-визуализатора
               </p>
             </div>
 
@@ -1654,7 +1646,7 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
                 <div className="flex gap-2 mt-2">
                   <Input
                     id="birthDate"
-                    type="date"
+                    type={formData.birthDate === '—' ? 'text' : 'date'}
                     value={formData.birthDate}
                     onChange={(e) => handleInputChange('birthDate', e.target.value)}
                     className="flex-1"
@@ -1674,7 +1666,7 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
                 <div className="flex gap-2 mt-2">
                   <Input
                     id="deathDate"
-                    type="date"
+                    type={formData.deathDate === '—' ? 'text' : 'date'}
                     value={formData.deathDate}
                     onChange={(e) => handleInputChange('deathDate', e.target.value)}
                     className="flex-1"
@@ -1732,7 +1724,7 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
             </div>
 
             <div id="data-consent" className={cn(
-              "flex items-start gap-3 p-4 rounded-full transition-all",
+              "flex items-start gap-2 md:gap-3 p-2 md:p-4 rounded-2xl md:rounded-full transition-all",
               showConsentError ? "bg-red-50 border-2 border-red-300" : "bg-gray-50 border border-gray-200"
             )}>
               <Checkbox
@@ -1742,9 +1734,9 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
                   handleInputChange('dataConsent', checked === true);
                   setShowConsentError(false);
                 }}
-                className="mt-1"
+                className="mt-0.5 md:mt-1 flex-shrink-0"
               />
-              <Label htmlFor="privacy" className="text-sm cursor-pointer">
+              <Label htmlFor="privacy" className="text-xs md:text-sm cursor-pointer leading-snug">
                 Я согласен на обработку персональных данных и подтверждаю, что ознакомлен с{' '}
                 <a href="#" className="underline text-blue-600">
                   политикой конфиденциальности
@@ -1949,25 +1941,22 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
                     <div className="relative mx-auto max-w-md">
                     {/* Передняя сторона карты */}
                     <div 
-                      className="relative w-full aspect-[1.586/1] rounded-2xl p-6 shadow-2xl"
-                      style={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      }}
+                      className="relative w-full aspect-[1.586/1] rounded-2xl p-6 shadow-2xl bg-white border border-gray-200"
                     >
                       {/* Голограмма/Чип */}
-                      <div className="absolute top-6 left-6 w-12 h-10 rounded bg-gradient-to-br from-yellow-200 to-yellow-400 opacity-80"></div>
+                      <div className="absolute top-6 left-6 w-12 h-10 rounded bg-gradient-to-br from-yellow-300/80 to-yellow-500/80 backdrop-blur"></div>
                       
                       {/* Логотип платежной системы */}
                       <div className="absolute top-6 right-6 flex gap-2">
-                        <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur"></div>
-                        <div className="w-8 h-8 rounded-full bg-white/30 backdrop-blur -ml-4"></div>
+                        <div className="w-8 h-8 rounded-full bg-white/50 backdrop-blur border border-white/60"></div>
+                        <div className="w-8 h-8 rounded-full bg-white/60 backdrop-blur border border-white/60 -ml-4"></div>
                       </div>
 
                       {/* Номер карты */}
                       <div className="absolute top-24 left-6 right-6">
                         <input
                           type="text"
-                          className="w-full bg-transparent border-none text-white text-xl tracking-[0.2em] placeholder:text-white/40 focus:outline-none font-mono -translate-y-[3%] lg:translate-y-[5%]"
+                          className="w-full bg-transparent border-none text-gray-900 text-xl tracking-[0.2em] placeholder:text-gray-500 focus:outline-none font-mono -translate-y-[3%] lg:translate-y-[5%]"
                           placeholder="0000 0000 0000 0000"
                           value={cardData.number}
                           onChange={(e) => {
@@ -1984,7 +1973,7 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
 
                           <input
                             type="text"
-                            className="w-full bg-transparent border-none text-white text-sm placeholder:text-white/40 focus:outline-none uppercase"
+                            className="w-full bg-transparent border-none text-gray-900 text-sm placeholder:text-gray-500 focus:outline-none uppercase"
                             placeholder="IVAN IVANOV"
                             value={cardData.holder}
                             onChange={(e) => {
@@ -1992,14 +1981,14 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
                               setCardData({ ...cardData, holder: value });
                             }}
                           />
-                          <div className="text-[10px] text-white/60 mt-1 uppercase tracking-wide">Держатель карты</div>
+                          <div className="text-[10px] text-gray-600 mt-1 uppercase tracking-wide">Держатель карты</div>
                         </div>
                         
                         <div className="ml-4">
 
                           <input
                             type="text"
-                            className="w-16 bg-transparent border-none text-white text-sm text-right placeholder:text-white/40 focus:outline-none font-mono"
+                            className="w-16 bg-transparent border-none text-gray-900 text-sm text-right placeholder:text-gray-500 focus:outline-none font-mono"
                             placeholder="MM/ГГ"
                             value={cardData.expiry}
                             onChange={(e) => {
@@ -2011,19 +2000,19 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
                             }}
                             maxLength={5}
                           />
-                          <div className="text-[10px] text-white/60 mt-1 uppercase tracking-wide text-right">Действительна</div>
+                          <div className="text-[10px] text-gray-600 mt-1 uppercase tracking-wide text-right">Действительна</div>
                         </div>
                       </div>
                     </div>
 
                     {/* CVC поле под картой */}
-                    <div className="mt-4 bg-white/10 border border-white/20 rounded-xl p-4">
+                    <div className="mt-4 bg-white border border-gray-200 rounded-xl p-4">
                       <div className="flex items-center gap-3">
                         <div className="flex-1">
-                          <Label htmlFor="cardCvc" className="text-white text-xs mb-2 block">CVC/CVV код</Label>
+                          <Label htmlFor="cardCvc" className="text-gray-900 text-xs mb-2 block">CVC/CVV код</Label>
                           <Input
                             id="cardCvc"
-                            className="bg-white/10 border-white/30 text-white placeholder:text-white/50 text-center text-lg tracking-widest font-mono"
+                            className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 text-center text-lg tracking-widest font-mono"
                             placeholder="•••"
                             type="password"
                             value={cardData.cvc}
@@ -2034,7 +2023,7 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
                             maxLength={3}
                           />
                         </div>
-                        <div className="text-xs text-white/60 max-w-[120px]">
+                        <div className="text-xs text-gray-600 max-w-[120px]">
                           3 цифры на обратной стороне карты
                         </div>
                       </div>
@@ -2049,17 +2038,17 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
                           className={cn(
                             "p-4 rounded-2xl border-2 transition-all duration-200 text-left",
                             paymentMethod === 'sbp'
-                              ? "border-white bg-white/10"
+                              ? "border-blue-500 bg-blue-500/20"
                               : "border-white/30 hover:border-white/50"
                           )}
                         >
                           <div className="flex items-center gap-2 mb-2">
                             <div className={cn(
                               "w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                              paymentMethod === 'sbp' ? "border-white" : "border-white/50"
+                              paymentMethod === 'sbp' ? "border-blue-400" : "border-white/50"
                             )}>
                               {paymentMethod === 'sbp' && (
-                                <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                                <div className="w-2.5 h-2.5 rounded-full bg-blue-400" />
                               )}
                             </div>
                             <span className="text-sm text-white">СБП</span>
@@ -2072,17 +2061,17 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
                           className={cn(
                             "p-4 rounded-2xl border-2 transition-all duration-200 text-left",
                             paymentMethod === 'installment'
-                              ? "border-white bg-white/10"
+                              ? "border-blue-500 bg-blue-500/20"
                               : "border-white/30 hover:border-white/50"
                           )}
                         >
                           <div className="flex items-center gap-2 mb-2">
                             <div className={cn(
                               "w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                              paymentMethod === 'installment' ? "border-white" : "border-white/50"
+                              paymentMethod === 'installment' ? "border-blue-400" : "border-white/50"
                             )}>
                               {paymentMethod === 'installment' && (
-                                <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                                <div className="w-2.5 h-2.5 rounded-full bg-blue-400" />
                               )}
                             </div>
                             <span className="text-sm text-white">Рассрочка</span>
@@ -2265,10 +2254,10 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
   };
 
   return (
-    <div ref={containerRef} className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 -translate-y-[5%]">
+    <div ref={containerRef} className="max-w-5xl mx-auto -translate-y-[5%]">
       <Card className="bg-white/20 backdrop-blur-2xl shadow-2xl rounded-3xl overflow-hidden border border-white/30">
-        <CardHeader className="pb-6 pt-8 px-6 sm:px-8">
-          <div className="text-center mb-6">
+        <CardHeader className="pb-4 pt-8 px-6 sm:px-8">
+          <div className="text-center mb-2" style={{ fontWeight: 40 }}>
             <CardTitle className="text-2xl sm:text-3xl mb-2 text-white">Пошаговый мастер</CardTitle>
             <CardDescription className="text-base text-white/90">
               Организуйте церемонию прощания за 5 простых шагов
@@ -2287,7 +2276,7 @@ export function StepperWorkflow({ formData, onUpdateFormData, onStepChange, onCe
           <div className={cn(
             'transition-opacity duration-200',
             isTransitioning ? 'opacity-0' : 'opacity-100'
-          )}>
+          )} style={{ minHeight: '600px' }}>
             {renderStepContent()}
           </div>
 

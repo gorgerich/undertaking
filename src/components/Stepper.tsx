@@ -1,5 +1,6 @@
 import { Check } from './Icons';
 import { cn } from './ui/utils';
+import { motion } from 'motion/react';
 
 interface Step {
   id: string;
@@ -15,101 +16,147 @@ interface StepperProps {
 }
 
 export function Stepper({ steps, currentStep, onStepClick, completedSteps = [] }: StepperProps) {
+  const radius = 280; // Радиус дуги
+  const totalSteps = steps.length;
+  
+  // Вычисляем позицию шага на дуге относительно центральной позиции
+  const getStepPosition = (relativeIndex: number) => {
+    // Угол для каждого шага (распределяем по 120 градусам)
+    const angleRange = 120;
+    const anglePerStep = angleRange / (totalSteps - 1);
+    
+    // relativeIndex = 0 означает центральную позицию (текущий шаг)
+    // Отрицательные значения - шаги слева, положительные - справа
+    const centerAngle = 90; // 90 градусов - верхняя точка дуги
+    const angle = (centerAngle - anglePerStep * relativeIndex) * (Math.PI / 180);
+    
+    // Вычисляем X и Y на основе угла
+    const x = Math.cos(angle) * radius;
+    const y = -Math.sin(angle) * radius * 0.6 + 171; // Опущено на 90% (с 20 до 171)
+    
+    return { x, y, angle };
+  };
+
   return (
-    <div className="w-full py-4 md:py-8 overflow-x-auto md:overflow-hidden scroll-smooth scrollbar-hide touch-pan-x">
-      <div className="relative w-full">
-        <div 
-          className="flex items-center transition-transform duration-500 ease-out"
-          style={{
-            transform: `translateX(calc(50% - ${100 + currentStep * 200}px))`
-          }}
-        >
+    <div className="w-full py-2 relative overflow-hidden" style={{ height: '140px', minHeight: '140px', maxHeight: '140px' }}>
+      <div className="relative w-full h-full flex items-center justify-center">
+        {/* Контейнер для шагов */}
+        <div className="absolute inset-0 flex items-center justify-center">
           {steps.map((step, index) => {
             const isCompleted = completedSteps.includes(index) || index < currentStep;
             const isCurrent = index === currentStep;
-            const isClickable = !!onStepClick; // Разрешаем клик на любой шаг
+            const isClickable = !!onStepClick;
+            
+            // Вычисляем относительную позицию от текущего шага
+            const relativeIndex = index - currentStep;
+            const position = getStepPosition(relativeIndex);
+            
+            // Эффект масштаба и прозрачности для нецентральных элементов
+            const distanceFromCurrent = Math.abs(relativeIndex);
+            const scale = Math.max(0.7, 1 - distanceFromCurrent * 0.15);
+            const opacity = Math.max(0.3, 1 - distanceFromCurrent * 0.25);
+            
+            // Скрываем шаги, которые слишком далеко
+            if (Math.abs(relativeIndex) > 2) {
+              return null;
+            }
 
             return (
-              <div key={step.id} className="flex items-center shrink-0" style={{ width: '200px' }}>
-                {/* Step Circle with Label - центрируем в контейнере 200px */}
-                <div className="flex flex-col items-center w-full">
-                  {/* Линии слева и справа от круга */}
-                  <div className="flex items-center w-full justify-center relative">
-                    {/* Left Line - фиксированная ширина */}
-                    <div 
+              <motion.div
+                key={step.id}
+                className="absolute"
+                initial={false}
+                animate={{
+                  x: position.x,
+                  y: position.y,
+                  scale: scale,
+                  opacity: opacity,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 100,
+                  damping: 20,
+                  mass: 0.8,
+                }}
+                style={{
+                  left: '50%',
+                  top: '50%',
+                }}
+              >
+                <div className="flex flex-col items-center -translate-x-1/2 -translate-y-1/2">
+                  {/* Step Circle */}
+                  <button
+                    onClick={() => isClickable && onStepClick?.(index)}
+                    disabled={!isClickable}
+                    type="button"
+                    className={cn(
+                      "shrink-0 z-10 relative outline-none",
+                      isClickable ? "cursor-pointer" : "cursor-default"
+                    )}
+                    style={{ perspective: '1000px' }}
+                  >
+                    <motion.div
+                      animate={{
+                        scale: isCurrent ? 1.15 : 1,
+                      }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 200,
+                        damping: 15,
+                      }}
                       className={cn(
-                        "h-0.5 absolute right-1/2 transition-colors duration-300",
-                        index > 0 && index <= currentStep ? "bg-gray-900" : "bg-gray-300"
-                      )}
-                      style={{ width: '68px', visibility: index === 0 ? 'hidden' : 'visible' }}
-                    />
-
-                    {/* Step Circle */}
-                    <button
-                      onClick={() => isClickable && onStepClick?.(index)}
-                      disabled={!isClickable}
-                      type="button"
-                      className={cn(
-                        "shrink-0 z-10 relative outline-none transition-transform duration-200",
-                        isClickable ? "cursor-pointer hover:scale-105" : "cursor-default"
+                        "w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 relative bg-white",
+                        isCompleted && "bg-gray-900 border-gray-900",
+                        isCurrent && "border-gray-900 bg-white shadow-xl ring-4 ring-gray-900/10",
+                        !isCompleted && !isCurrent && "border-gray-300 bg-white",
+                        isClickable && !isCurrent && "hover:border-gray-700 hover:shadow-md hover:scale-110"
                       )}
                     >
-                      <div
-                        className={cn(
-                          "w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 relative bg-white",
-                          isCompleted && "bg-gray-900 border-gray-900 scale-110",
-                          isCurrent && "border-gray-900 bg-white shadow-lg scale-110 ring-4 ring-gray-900/10",
-                          !isCompleted && !isCurrent && "border-gray-300 bg-white",
-                          isClickable && !isCurrent && "hover:border-gray-700 hover:shadow-md"
-                        )}
-                      >
-                        {isCompleted && !isCurrent ? (
-                          <Check className="w-6 h-6 text-white" />
-                        ) : (
-                          <span
-                            className={cn(
-                              "text-base transition-colors",
-                              isCurrent && "text-gray-900",
-                              isCompleted && !isCurrent && "text-white",
-                              !isCompleted && !isCurrent && "text-gray-400"
-                            )}
-                          >
-                            {index + 1}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-
-                    {/* Right Line - фиксированная ширина */}
-                    <div 
-                      className={cn(
-                        "h-0.5 absolute left-1/2 transition-colors duration-300",
-                        index < currentStep ? "bg-gray-900" : "bg-gray-300"
+                      {isCompleted && !isCurrent ? (
+                        <Check className="w-6 h-6 text-white" />
+                      ) : (
+                        <span
+                          className={cn(
+                            "text-base transition-colors",
+                            isCurrent && "text-gray-900",
+                            isCompleted && !isCurrent && "text-white",
+                            !isCompleted && !isCurrent && "text-gray-400"
+                          )}
+                        >
+                          {index + 1}
+                        </span>
                       )}
-                      style={{ width: '68px', visibility: index === steps.length - 1 ? 'hidden' : 'visible' }}
-                    />
-                  </div>
+                    </motion.div>
+                  </button>
 
-                  {/* Label под кругом */}
-                  <div className="flex flex-col items-center text-center mt-2">
+                  {/* Label ПОД кругом */}
+                  <motion.div 
+                    className="flex flex-col items-center text-center mt-3"
+                    animate={{
+                      opacity: isCurrent ? 1 : 0.6,
+                      y: isCurrent ? 0 : 3,
+                    }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 150,
+                      damping: 15,
+                    }}
+                  >
                     <span
                       className={cn(
-                        "text-sm transition-all duration-300 whitespace-nowrap",
-                        (isCompleted || isCurrent) && "text-gray-900",
-                        isCurrent && "scale-105",
-                        !isCompleted && !isCurrent && "text-gray-500"
+                        "text-sm transition-all duration-300 whitespace-nowrap text-white"
                       )}
                     >
                       {step.label}
                     </span>
-                    {step.description && (
+                    {step.description && isCurrent && (
                       <span className="text-xs text-gray-500 mt-0.5 whitespace-nowrap">
                         {step.description}
                       </span>
                     )}
-                  </div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
