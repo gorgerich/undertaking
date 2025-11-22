@@ -1,14 +1,12 @@
-/* Системные шрифты + Playfair Display (без сторонних кастомных CDN-шрифтов) */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Font Family */
   --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   --font-family-serif: 'Playfair Display', Georgia, serif;
-  /* Дисплейный шрифт теперь тоже на Playfair Display */
   --font-family-display: 'Playfair Display', Georgia, serif;
+}
 
   /* Typography */
   --font-size: 16px;
