@@ -1,14 +1,15 @@
-/* Системные шрифты вместо внешних - безопасно для Figma Make CDN */
+/* Системные шрифты + Playfair Display (без сторонних кастомных CDN-шрифтов) */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap');
-@import url('https://fonts.cdnfonts.com/css/spirits-sharp');
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Font Family - системные шрифты для совместимости с Figma Make */
+  /* Font Family */
   --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   --font-family-serif: 'Playfair Display', Georgia, serif;
-  --font-family-display: 'Spirits Sharp', 'Playfair Display', Georgia, serif;
+  /* Дисплейный шрифт теперь тоже на Playfair Display */
+  --font-family-display: 'Playfair Display', Georgia, serif;
+
   /* Typography */
   --font-size: 16px;
   --font-weight-medium: 500;
@@ -211,7 +212,6 @@
     }
   }
   
-  /* Container utility */
   .container-custom {
     width: 100%;
     max-width: var(--container-max-width);
@@ -221,7 +221,6 @@
     padding-right: var(--container-padding);
   }
   
-  /* Skeleton shimmer animation */
   @keyframes shimmer {
     0% {
       background-position: -1000px 0;
@@ -243,7 +242,6 @@
     background-size: 1000px 100%;
   }
   
-  /* Seamless scrolling - hide scrollbar but keep functionality */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -253,7 +251,6 @@
     display: none;
   }
   
-  /* Date input styling to match other inputs */
   input[type="date"] {
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -265,7 +262,6 @@
     align-items: center;
   }
   
-  /* Show placeholder for empty date inputs */
   input[type="date"]:not(:focus):not(:valid) {
     color: var(--muted-foreground);
   }
@@ -293,14 +289,12 @@
     padding: 0 2px;
   }
   
-  /* System Bold utility class */
   .font-geometria-bold {
     font-family: var(--font-family-base);
     font-weight: 800;
     letter-spacing: -0.02em;
   }
   
-  /* Stepper overlay positioning - responsive */
   .stepper-overlay-position {
     margin-top: -35%;
   }
@@ -312,9 +306,7 @@
   }
 }
 
-/**
- * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
- */
+/* Базовая типографика */
 @layer base {
   :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
     h1 {
